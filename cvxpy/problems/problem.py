@@ -27,7 +27,7 @@ from cvxpy.reductions.solvers.solving_chain import construct_solving_chain
 # Only need to import cvxpy.transform.get_separable_problems, but this creates
 # a circular import (cvxpy.transforms imports Problem). Hence we need to import
 # cvxpy here.
-import cvxpy
+import cvxpy  # noqa
 import cvxpy.constraints.zero as eqc
 import cvxpy.utilities as u
 from collections import namedtuple
@@ -243,10 +243,7 @@ class Problem(u.Canonical):
             solve_func = Problem.REGISTERED_SOLVE_METHODS[func_name]
         else:
             solve_func = Problem._solve
-        try:
-            return solve_func(self, *args, **kwargs)
-        except:
-            raise
+        return solve_func(self, *args, **kwargs)
 
     @classmethod
     def register_solve(cls, name, func):
@@ -340,8 +337,8 @@ class Problem(u.Canonical):
             why the problem could not be solved.
         """
         if parallel:
-            self._separable_problems = (
-                cvxpy.transforms.get_separable_problems(self))
+            from cvxpy.transforms.separable_problems import get_separable_problems
+            self._separable_problems = (get_separable_problems(self))
             if len(self._separable_problems) > 1:
                 return self._parallel_solve(solver, ignore_dcp, warm_start,
                                             verbose, **kwargs)

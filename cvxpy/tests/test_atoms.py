@@ -20,6 +20,7 @@ along with CVXPY.  If not, see <http://www.gnu.org/licenses/>.
 import cvxpy
 import cvxpy.settings as s
 from cvxpy.atoms import *
+from cvxpy.transforms.partial_optimize import partial_optimize
 from cvxpy.expressions.variable import Variable
 from cvxpy.expressions.constants import Parameter, Constant
 import cvxpy.utilities as u
@@ -82,20 +83,6 @@ class TestAtoms(BaseTest):
         self.assertEqual(atom.curvature, s.CONVEX)
         self.assertEqual(norm1(atom).curvature, s.CONVEX)
         self.assertEqual(norm1(-atom).curvature, s.CONVEX)
-
-    # Test the norm2 class.
-    def test_norm2(self):
-        exp = self.x+self.y
-        atom = norm2(exp)
-        # self.assertEqual(atom.name(), "norm2(x + y)")
-        self.assertEqual(atom.shape, tuple())
-        self.assertEqual(atom.curvature, s.CONVEX)
-        self.assertEqual(norm2(atom).curvature, s.CONVEX)
-        self.assertEqual(norm2(-atom).curvature, s.CONVEX)
-
-        # Test with axis arg.
-        expr = norm(self.A, 2, axis=0)
-        self.assertEqual(expr.shape, (2,))
 
     def test_quad_form(self):
         """Test quad_form atom.
@@ -199,6 +186,8 @@ class TestAtoms(BaseTest):
         self.assertEqual(atom.shape, tuple())
         self.assertEqual(atom.curvature, s.CONVEX)
         self.assertEqual(atom.sign, s.NONNEG)
+        expr = norm(self.A, 2, axis=0)
+        self.assertEqual(expr.shape, (2,))
 
         atom = pnorm(self.x, p='inf')
         self.assertEqual(atom.shape, tuple())
@@ -253,6 +242,21 @@ class TestAtoms(BaseTest):
         self.assertTrue(type(copy) is type(atom))
         self.assertTrue(copy.args[0] is self.y)
         self.assertEqual(copy.get_data(), atom.get_data())
+
+    def test_matrix_norms(self):
+        """
+        Matrix 1-norm, 2-norm (sigma_max), infinity-norm,
+            Frobenius norm, and nuclear-norm.
+        """
+        for p in [1, 2, np.inf, 'fro', 'nuc']:
+            for var in [self.A, self.C]:
+                atom = norm(var, p)
+                self.assertEqual(atom.shape, tuple())
+                self.assertEqual(atom.curvature, s.CONVEX)
+                self.assertEqual(atom.sign, s.NONNEG)
+                var.value = np.random.randn(*var.shape)
+                self.assertAlmostEqual(atom.value, np.linalg.norm(var.value, ord=p))
+        pass
 
     def test_quad_over_lin(self):
         # Test quad_over_lin DCP.
@@ -592,7 +596,7 @@ class TestAtoms(BaseTest):
         # Valid.
         huber(self.x, M)
         M.value = 1
-        self.assertAlmostEquals(huber(2, M).value, 3)
+        self.assertAlmostEqual(huber(2, M).value, 3)
         # Invalid.
         M = Parameter(nonpos=True)
         with self.assertRaises(Exception) as cm:
@@ -741,17 +745,17 @@ class TestAtoms(BaseTest):
         x, t = Variable(dims), Variable(dims)
         xval = [-5]*dims
         p2 = Problem(cvxpy.Minimize(cvxpy.sum(t)), [-t <= x, x <= t])
-        g = cvxpy.partial_optimize(p2, [t], [x])
+        g = partial_optimize(p2, [t], [x])
         self.assertEqual(g.curvature, s.CONVEX)
 
         p2 = Problem(cvxpy.Maximize(cvxpy.sum(t)), [-t <= x, x <= t])
-        g = cvxpy.partial_optimize(p2, [t], [x])
+        g = partial_optimize(p2, [t], [x])
         self.assertEqual(g.curvature, s.CONCAVE)
 
         p2 = Problem(cvxpy.Maximize(square(t[0])), [-t <= x, x <= t])
-        g = cvxpy.partial_optimize(p2, [t], [x])
-        self.assertEquals(g.is_convex(), False)
-        self.assertEquals(g.is_concave(), False)
+        g = partial_optimize(p2, [t], [x])
+        self.assertEqual(g.is_convex(), False)
+        self.assertEqual(g.is_concave(), False)
 
     # Test the partial_optimize atom.
     def test_partial_optimize_eval_1norm(self):
@@ -764,14 +768,14 @@ class TestAtoms(BaseTest):
 
         # Minimize the 1-norm via partial_optimize.
         p2 = Problem(cvxpy.Minimize(cvxpy.sum(t)), [-t <= x, x <= t])
-        g = cvxpy.partial_optimize(p2, [t], [x])
+        g = partial_optimize(p2, [t], [x])
         p3 = Problem(cvxpy.Minimize(g), [x == xval])
         p3.solve()
         self.assertAlmostEqual(p1.value, p3.value)
 
         # Minimize the 1-norm using maximize.
         p2 = Problem(cvxpy.Maximize(cvxpy.sum(-t)), [-t <= x, x <= t])
-        g = cvxpy.partial_optimize(p2, opt_vars=[t])
+        g = partial_optimize(p2, opt_vars=[t])
         p3 = Problem(cvxpy.Maximize(g), [x == xval])
         p3.solve()
         self.assertAlmostEqual(p1.value, -p3.value)
@@ -780,24 +784,24 @@ class TestAtoms(BaseTest):
 
         # Minimize the 1-norm via partial_optimize.
         p2 = Problem(cvxpy.Minimize(cvxpy.sum(t)), [-t <= x, x <= t])
-        g = cvxpy.partial_optimize(p2, opt_vars=[t])
+        g = partial_optimize(p2, opt_vars=[t])
         p3 = Problem(cvxpy.Minimize(g), [x == xval])
         p3.solve()
         self.assertAlmostEqual(p1.value, p3.value)
 
         # Minimize the 1-norm via partial_optimize.
-        g = cvxpy.partial_optimize(p2, dont_opt_vars=[x])
+        g = partial_optimize(p2, dont_opt_vars=[x])
         p3 = Problem(cvxpy.Minimize(g), [x == xval])
         p3.solve()
         self.assertAlmostEqual(p1.value, p3.value)
 
         with self.assertRaises(Exception) as cm:
-            g = cvxpy.partial_optimize(p2)
+            g = partial_optimize(p2)
         self.assertEqual(str(cm.exception),
                          "partial_optimize called with neither opt_vars nor dont_opt_vars.")
 
         with self.assertRaises(Exception) as cm:
-            g = cvxpy.partial_optimize(p2, [], [x])
+            g = partial_optimize(p2, [], [x])
         self.assertEqual(str(cm.exception),
                          ("If opt_vars and new_opt_vars are both specified, "
                           "they must contain all variables in the problem.")
@@ -810,7 +814,7 @@ class TestAtoms(BaseTest):
         p1 = Problem(Minimize(cvxpy.sum(t)), [-t <= x, x <= t])
 
         # Minimize the 1-norm via partial_optimize
-        g = cvxpy.partial_optimize(p1, [t], [x])
+        g = partial_optimize(p1, [t], [x])
         p2 = Problem(Minimize(g))
         p2.solve()
 
@@ -826,7 +830,7 @@ class TestAtoms(BaseTest):
 
         # Solve the two-stage problem via partial_optimize
         p2 = Problem(Minimize(y), [x+y >= 3, y >= 4])
-        g = cvxpy.partial_optimize(p2, [y], [x])
+        g = partial_optimize(p2, [y], [x])
         p3 = Problem(Minimize(x+g), [x >= 5])
         p3.solve()
         self.assertAlmostEqual(p1.value, p3.value)
@@ -840,7 +844,7 @@ class TestAtoms(BaseTest):
 
         # Solve the two-stage problem via partial_optimize
         p2 = Problem(Minimize(y), [x+y >= 3, y >= 4])
-        g = cvxpy.partial_optimize(p2, [y], [x])
+        g = partial_optimize(p2, [y], [x])
         p3 = Problem(Minimize(x+g), [x >= 5])
         p3.solve(solver=cvxpy.ECOS_BB)
         self.assertAlmostEqual(p1.value, p3.value)
@@ -854,7 +858,7 @@ class TestAtoms(BaseTest):
 
         # Solve the two-stage problem via partial_optimize
         p2 = Problem(Minimize(exp(y)), [x+y >= 3, y >= 4])
-        g = cvxpy.partial_optimize(p2, [y], [x])
+        g = partial_optimize(p2, [y], [x])
         p3 = Problem(Minimize(x+g), [x >= 5])
         p3.solve()
         self.assertAlmostEqual(p1.value, p3.value)
@@ -872,7 +876,7 @@ class TestAtoms(BaseTest):
 
         # Solve the two-stage problem via partial_optimize
         p2 = Problem(Minimize(y), [x+y >= gamma, y >= 4])
-        g = cvxpy.partial_optimize(p2, [y], [x])
+        g = partial_optimize(p2, [y], [x])
         p3 = Problem(Minimize(x+g), [x >= 5])
         p3.solve()
         self.assertAlmostEqual(p1.value, p3.value)
@@ -888,7 +892,7 @@ class TestAtoms(BaseTest):
         # Solve the two-stage problem via partial_optimize
         constr = [y >= -100]
         p2 = Problem(Minimize(y), [x+y >= 3] + constr)
-        g = cvxpy.partial_optimize(p2, [y], [x])
+        g = partial_optimize(p2, [y], [x])
         x.value = xval
         y.value = 42
         constr[0].dual_variables[0].value = 42
@@ -899,7 +903,7 @@ class TestAtoms(BaseTest):
 
         # No variables optimized over.
         p2 = Problem(Minimize(y), [x+y >= 3])
-        g = cvxpy.partial_optimize(p2, [], [x, y])
+        g = partial_optimize(p2, [], [x, y])
         x.value = xval
         y.value = 42
         p2.constraints[0].dual_variables[0].value = 42
@@ -915,8 +919,8 @@ class TestAtoms(BaseTest):
         p1 = Problem(Minimize(cvxpy.sum(t)), [-t <= x, x <= t])
 
         # Minimize the 1-norm via partial_optimize
-        g = cvxpy.partial_optimize(p1, [t], [x])
-        g2 = cvxpy.partial_optimize(Problem(Minimize(g)), [x])
+        g = partial_optimize(p1, [t], [x])
+        g2 = partial_optimize(Problem(Minimize(g)), [x])
         p2 = Problem(Minimize(g2))
         p2.solve()
 

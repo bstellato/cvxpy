@@ -50,6 +50,11 @@ def index():
     return index.index
 
 
+def indicator():
+    from cvxpy.transforms.indicator import indicator
+    return indicator
+
+
 def minimize():
     from cvxpy.problems import objective
     return objective.Minimize

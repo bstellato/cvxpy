@@ -136,7 +136,7 @@ class ExpCone(NonlinearConstraint):
     def is_dcp(self):
         """An exponential constraint is DCP if each argument is affine.
         """
-        return all([arg.is_affine() for arg in self.args])
+        return all(arg.is_affine() for arg in self.args)
 
     def canonicalize(self):
         """Canonicalizes by converting expressions to LinOps.
@@ -184,7 +184,7 @@ class ExpCone(NonlinearConstraint):
             and (z scaled) Hessian at x.
         """
         import cvxopt  # Not necessary unless using cvxopt solver.
-        entries = np.prod(self.shape, dtype=int)
+        entries = int(np.prod(self.shape))
         if vars_ is None:
             x_init = entries*[0.0]
             y_init = entries*[0.5]

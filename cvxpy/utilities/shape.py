@@ -19,7 +19,7 @@ along with CVXPY.  If not, see <http://www.gnu.org/licenses/>.
 
 
 def squeezed(shape):
-    return tuple([dim for dim in shape if dim != 1])
+    return tuple(dim for dim in shape if dim != 1)
 
 
 def sum_shapes(shapes):
@@ -139,10 +139,7 @@ def mul_shapes(lh_shape, rh_shape):
     """
     lh_old = lh_shape
     rh_old = rh_shape
-    try:
-        lh_shape, rh_shape, shape = mul_shapes_promote(lh_shape, rh_shape)
-    except:
-        raise
+    lh_shape, rh_shape, shape = mul_shapes_promote(lh_shape, rh_shape)
     if lh_shape != lh_old:
         shape = shape[1:]
     if rh_shape != rh_old:
