@@ -17,6 +17,11 @@ You should have received a copy of the GNU General Public License
 along with CVXPY.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+"""
+THIS FILE IS DEPRECATED AND MAY BE REMOVED WITHOUT WARNING!
+DO NOT CALL THESE FUNCTIONS IN YOUR CODE!
+"""
+
 import cvxpy.atoms as at
 from cvxpy.expressions.constants import Constant
 from cvxpy.expressions.variable import Variable
@@ -52,7 +57,7 @@ class TestProblem(unittest.TestCase):
             for i in range(len(a)):
                 self.assertAlmostEqual(a[i], b[i])
         except Exception:
-            super(TestProblem, self).assertAlmostEqual(a, b, places=2)
+            super(TestProblem, self).assertAlmostEqual(a, b, places=1)
 
     def test_large_sum(self):
         """Test large number of variables summed.

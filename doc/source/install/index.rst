@@ -14,18 +14,20 @@ CVXPY supports both Python 2 and Python 3 on OS X and Linux.
 
    ::
 
-      conda install numpy scipy pip
-      conda install -c cvxgrp ecos scs multiprocess 
+      conda install --yes mkl pip nose numpy scipy
+      conda install -c conda-forge --yes lapack
+      conda install -c cvxgrp --yes ecos scs multiprocess
 
 3. Clone the `CVXPY git repository`_.
-4. Navigate to the top-level of the cloned directory and run
+4. Remove all existing installations of `CVXcanon`_ if you started at step 3.
+5. Navigate to the top-level of the cloned directory and run
 
    ::
 
        git checkout 1.0
        python setup.py install
 
-5. Test the installation with ``nose``.
+6. Test the installation with ``nose``.
 
   ::
 
